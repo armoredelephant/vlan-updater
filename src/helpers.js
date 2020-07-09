@@ -30,48 +30,56 @@ const generateResponseBody = (subnet, applianceId) => {
   return body;
 };
 
-const putVLANData = async (data, networks) => {
-  try {
-    const network = data["Network name"]; // 25_88_meraki
-    const networkSplit = network.split("_"); // [25, 88, meraki];
+const delay = interval => new Promise(resolve => setTimeout(resolve, interval));
 
-    const networkSplitPlusOne = parseInt(networkSplit[1]) + 1; // 89?
-    const applianceId = `192.168.${networkSplit[0]}.${networkSplitPlusOne}`; // 192.168.25.89
-    const subnet = `192.168.${networkSplit[0]}.${networkSplit[1]}/29`; // 192.168.25.88
+const putVLANData = async (network, { url, body }) => {
+  await delay(500);
 
-    const body = generateResponseBody(subnet, applianceId);
+  const put = {
+    method: "PUT",
+    url: url,
+    headers,
+    body: JSON.stringify(body)
+  };
 
-    let url;
-    let networkId;
-
-    for (let i = 0; i < networks.length; i++) {
-      if (networks[i].name === network) {
-        networkId = networks[i].id;
-        url = ``; // edit with url
-        break;
-      }
+  return request(put, function(error, _response) {
+    if (error) {
+      console.log(error.message);
+      throw new Error(error);
     }
+    console.log(`Network: ${network} has been updated`);
+  });
+};
 
-    if (!url || !networkId) {
-      throw new Error(`No matched network for ${network}`);
-    } else {
-      const put = {
-        method: "PUT",
+const generateNetworkData = async data => {
+  const networkName = data["Network name"];
+  const networkSplit = networkName.split("_");
+  const networkSplitPlusOne = parseInt(networkSplit[1]) + 1;
+
+  const applianceId = `192.168.${networkSplit[0]}.${networkSplitPlusOne}`;
+  const subnet = `192.168.${networkSplit[0]}.${networkSplit[1]}`;
+
+  return { networkName: networkName, applianceId: applianceId, subnet: subnet };
+};
+
+const loopNetworks = async (networks, networkData) => {
+  for (const network of networks) {
+    if (networkData.has(network.name)) {
+      const networkId = network.id;
+      const url = ``; // Edit this with company url, networkId will be used in the url path
+      const { subnet, applianceId } = networkData.get(network.name);
+      const body = await generateResponseBody(subnet, applianceId);
+
+      const updatedNetworkData = {
         url: url,
-        headers,
-        body: JSON.stringify(body)
+        body: body
       };
-      request(put, function(error, _response) {
-        if (error) {
-          console.log(error.message);
-          throw new Error(error);
-        }
-        console.log(`Network: ${network} has been updated`);
-      });
+
+      networkData.set(network.name, { ...updatedNetworkData });
     }
-  } catch (error) {
-    console.log(error.message);
   }
 };
 
 exports.putVLANData = putVLANData;
+exports.generateNetworkData = generateNetworkData;
+exports.loopNetworks = loopNetworks;
