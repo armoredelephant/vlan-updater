@@ -1,3 +1,5 @@
+## After using the bulk impor tool within the meraki dashboard, this tool can be ran to update the VLAN for each network so there's no need to individually edit each meraki.
+
 ## _ This tool will only work with meraki networks with the naming convention ###\_###\_meraki, where the numbers are the 3rd and 4th set of decimals. _
 
 ## How to use
